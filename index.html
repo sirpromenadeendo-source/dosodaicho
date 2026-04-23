@@ -1,0 +1,1423 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>土層台帳 入力アプリ</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Hiragino Sans','Meiryo',sans-serif;font-size:15px;background:#f4f4f4;color:#222}
+header{background:#2c5f8a;color:#fff;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+header h1{font-size:16px;font-weight:bold}
+.header-btns{display:flex;gap:6px;flex-wrap:wrap}
+.btn{padding:6px 10px;border:none;border-radius:5px;cursor:pointer;font-size:13px;font-weight:bold}
+.btn-white{background:#fff;color:#2c5f8a}
+.btn-green{background:#2ecc71;color:#fff}
+.btn-red{background:#e74c3c;color:#fff}
+.btn-orange{background:#e67e22;color:#fff}
+.btn-blue{background:#3498db;color:#fff}
+.btn-gray{background:#888;color:#fff}
+.tabs{display:flex;background:#1a3f60;position:sticky;top:52px;z-index:99}
+.tab{flex:1;padding:10px 4px;text-align:center;color:#aad;cursor:pointer;font-size:13px;border-bottom:3px solid transparent}
+.tab.active{color:#fff;border-bottom:3px solid #4fc3f7;font-weight:bold}
+.panel{display:none;padding:12px}
+.panel.active{display:block}
+
+/* 入力フォーム */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.form-group{display:flex;flex-direction:column;gap:3px}
+.form-group.full{grid-column:1/-1}
+label{font-size:12px;color:#555;font-weight:bold}
+select,input[type=text],input[type=number],textarea{
+  width:100%;padding:8px;border:1px solid #ccc;border-radius:5px;
+  font-size:15px;background:#fff;-webkit-appearance:none
+}
+textarea{height:60px;resize:vertical}
+.preview-box{background:#fff;border:1px solid #ddd;border-radius:8px;padding:10px;margin-top:10px}
+.preview-box h3{font-size:13px;color:#555;margin-bottom:6px}
+.preview-val{font-size:15px;color:#222;min-height:20px}
+.preview-val.auto{color:#1a6bb5;font-weight:bold}
+.preview-val.empty{color:#aaa;font-style:italic}
+.copy-btn{margin-top:6px;font-size:12px;padding:5px 10px}
+
+/* 混入物 */
+.konkyu-list{margin:6px 0;display:flex;flex-direction:column;gap:6px}
+.konkyu-item{background:#e8f4ff;border-radius:6px;padding:8px;position:relative}
+.konkyu-item .remove-btn{position:absolute;right:6px;top:6px;background:#e74c3c;color:#fff;border:none;border-radius:3px;padding:2px 7px;font-size:12px;cursor:pointer}
+.konkyu-row{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr;gap:4px;align-items:center}
+.konkyu-label{font-size:11px;color:#555;text-align:center}
+.add-konkyu-btn{background:#3498db;color:#fff;border:none;border-radius:5px;padding:7px 12px;font-size:13px;cursor:pointer;width:100%;margin-top:4px}
+
+/* 一覧 */
+.list-table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:600px}
+th{background:#2c5f8a;color:#fff;padding:7px 6px;text-align:left;white-space:nowrap}
+td{padding:6px;border-bottom:1px solid #ddd;vertical-align:top}
+tr:hover td{background:#f0f7ff}
+.edit-btn{background:#3498db;color:#fff;border:none;border-radius:3px;padding:3px 8px;cursor:pointer;font-size:12px}
+.del-btn{background:#e74c3c;color:#fff;border:none;border-radius:3px;padding:3px 8px;cursor:pointer;font-size:12px}
+.action-bar{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.count-badge{background:#2c5f8a;color:#fff;padding:4px 10px;border-radius:12px;font-size:13px}
+
+/* アコーディオン */
+.group-header{
+  display:flex;align-items:center;justify-content:space-between;
+  background:#2c5f8a;color:#fff;padding:10px 12px;
+  border-radius:6px;margin-bottom:4px;cursor:pointer;
+  user-select:none;
+}
+.group-header:hover{background:#1a3f60}
+.group-title{font-weight:bold;font-size:15px}
+
+/* 写真台帳印刷プレビューモーダル */
+.ledger-modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:999;background:rgba(0,0,0,0.7);flex-direction:column}
+.ledger-modal.open{display:flex}
+.ledger-modal-bar{background:#1a3f60;padding:8px 12px;display:flex;gap:8px;align-items:center}
+.ledger-modal-bar span{color:#fff;font-size:14px;font-weight:bold;flex:1}
+.ledger-modal-body{flex:1;overflow-y:auto;background:#ddd;padding:10px}
+.ledger-page{background:#fff;max-width:800px;margin:0 auto 16px;padding:20px;font-family:'Hiragino Sans','Meiryo',sans-serif;font-size:12px}
+.ledger-page-title{font-size:16px;font-weight:bold;border-bottom:2px solid #2c5f8a;padding-bottom:6px;margin-bottom:12px;color:#2c5f8a}
+.ledger-photos{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.ledger-photo-item{text-align:center}
+.ledger-photo-item img{display:block;border:1px solid #ccc;object-fit:cover}
+.ledger-photo-item .ledger-photo-cap{font-size:10px;color:#555;margin-top:2px;max-width:150px;word-break:break-all}
+.ledger-table{width:100%;border-collapse:collapse;font-size:11px}
+.ledger-table th{background:#2c5f8a;color:#fff;padding:5px 4px;text-align:center;border:1px solid #aac}
+.ledger-table td{padding:4px 5px;border:1px solid #ccc;vertical-align:top}
+.ledger-table tr:nth-child(even) td{background:#f5f9ff}
+.ledger-no-photo{color:#aaa;font-size:12px;margin-bottom:10px}
+
+@media print {
+  header,div.tabs,.panel:not(#panel-print),
+  .ledger-modal-bar{display:none!important}
+  .ledger-modal{position:static!important;background:none!important;display:block!important}
+  .ledger-modal-body{overflow:visible!important;background:none!important;padding:0!important}
+  .ledger-page{box-shadow:none!important;page-break-after:always}
+}
+.group-meta{font-size:12px;color:#aad;margin-left:8px}
+.group-arrow{font-size:14px;transition:transform 0.2s}
+.group-arrow.open{transform:rotate(90deg)}
+.group-body{display:none;margin-bottom:10px}
+.group-body.open{display:block}
+
+/* 保存ボタン */
+.save-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.save-btns .btn{padding:12px;font-size:14px}
+.notice{color:#888;font-size:12px;margin-top:6px;text-align:center}
+
+/* 写真エリア */
+.photo-area{padding:10px;border-top:1px solid #d0dde8;margin-top:6px}
+.photo-area-title{font-size:12px;font-weight:bold;color:#2c5f8a;margin-bottom:8px}
+.photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-bottom:8px}
+.photo-card{position:relative;border-radius:6px;overflow:hidden;background:#e8f0f7;border:1px solid #c0d4e8}
+.photo-card img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;cursor:pointer}
+.photo-card .photo-caption{font-size:11px;padding:3px 5px;background:rgba(0,0,0,0.55);color:#fff;position:absolute;bottom:0;left:0;right:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.photo-card .photo-del{position:absolute;top:3px;right:3px;background:rgba(231,76,60,0.85);color:#fff;border:none;border-radius:3px;padding:1px 6px;font-size:12px;cursor:pointer}
+.photo-card .photo-edit-btn{position:absolute;top:3px;left:3px;background:rgba(52,152,219,0.85);color:#fff;border:none;border-radius:3px;padding:1px 6px;font-size:12px;cursor:pointer}
+.photo-add-btns{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:2px}
+.photo-add-btn{background:#fff;border:2px dashed #2c5f8a;border-radius:6px;color:#2c5f8a;font-size:13px;font-weight:bold;padding:8px;width:100%;cursor:pointer}
+.photo-add-btn:hover{background:#eaf3fb}
+.photo-input{display:none}
+
+/* 手書きモーダル */
+.draw-modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:1000;background:rgba(0,0,0,0.85);flex-direction:column}
+.draw-modal.open{display:flex}
+.draw-toolbar{background:#1a3f60;padding:8px 10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.draw-toolbar label{color:#fff;font-size:12px}
+.draw-toolbar input[type=color]{width:36px;height:30px;border:none;border-radius:4px;padding:0;cursor:pointer}
+.draw-toolbar input[type=range]{width:80px}
+.draw-canvas-wrap{flex:1;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#222}
+#drawCanvas{touch-action:none;cursor:crosshair;max-width:100%;max-height:100%}
+.draw-actions{background:#1a3f60;padding:8px 10px;display:flex;gap:8px;justify-content:flex-end}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🏺 土層台帳</h1>
+  <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+    <div class="header-btns">
+      <button class="btn btn-white" onclick="exportCSV()">CSV出力</button>
+      <button class="btn btn-white" onclick="saveJSON()">JSON保存</button>
+    </div>
+    <div id="autoSaveStatus" style="font-size:11px;color:#aad">自動保存：未保存</div>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('input')">入力</div>
+  <div class="tab" onclick="switchTab('list')">一覧 (<span id="countBadge">0</span>)</div>
+  <div class="tab" onclick="switchTab('settings')">設定</div>
+</div>
+
+<!-- ===== 入力タブ ===== -->
+<div class="panel active" id="panel-input">
+
+  <div class="form-grid">
+    <div class="form-group">
+      <label>遺構種別</label>
+      <select id="ikoType"></select>
+    </div>
+    <div class="form-group">
+      <label>遺構番号</label>
+      <select id="ikoNum"></select>
+    </div>
+    <div class="form-group">
+      <label>SPL</label>
+      <select id="spl"><option value=""></option></select>
+    </div>
+    <div class="form-group">
+      <label>層番</label>
+      <select id="soban"></select>
+    </div>
+    <div class="form-group">
+      <label>Hue</label>
+      <select id="hue" onchange="updateColor()"></select>
+    </div>
+    <div class="form-group">
+      <label>Value</label>
+      <select id="value_" onchange="updateColor()"></select>
+    </div>
+    <div class="form-group">
+      <label>Chroma</label>
+      <select id="chroma" onchange="updateColor()"></select>
+    </div>
+    <div class="form-group">
+      <label>土種</label>
+      <select id="doshu"></select>
+    </div>
+    <div class="form-group">
+      <label>締り</label>
+      <select id="shimari"></select>
+    </div>
+    <div class="form-group">
+      <label>粘性</label>
+      <select id="nendo"></select>
+    </div>
+    <div class="form-group full">
+      <label>性格（自由記入）</label>
+      <input type="text" id="seikaku" placeholder="例: 掘方埋土">
+    </div>
+  </div>
+
+  <!-- 混入物 -->
+  <div style="margin-top:10px">
+    <label style="font-size:12px;color:#555;font-weight:bold">混入物</label>
+    <div class="konkyu-list" id="konnyuList"></div>
+    <button class="add-konkyu-btn" onclick="addKonnyu()">＋ 混入物を追加</button>
+  </div>
+
+  <div class="form-group full" style="margin-top:8px">
+    <label>備考</label>
+    <textarea id="biko" placeholder="自由記入"></textarea>
+  </div>
+
+  <!-- プレビュー -->
+  <div class="preview-box">
+    <h3>▼ 自動補完プレビュー</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px">
+      <div>
+        <div style="font-size:11px;color:#888">遺構コード</div>
+        <div class="preview-val auto" id="prev_code">-</div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:#888">色コード</div>
+        <div class="preview-val auto" id="prev_colorcode">-</div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:#888">土色</div>
+        <div class="preview-val auto" id="prev_color">-</div>
+      </div>
+    </div>
+    <div style="font-size:11px;color:#888">混入物記載文</div>
+    <div class="preview-val" id="prev_konnyu" style="font-size:13px;margin-bottom:6px"></div>
+    <div style="font-size:11px;color:#888">全体記載文</div>
+    <div class="preview-val" id="prev_all" style="font-size:13px"></div>
+    <button class="btn btn-gray copy-btn" onclick="copyAll()">📋 全体記載文をコピー</button>
+  </div>
+
+  <div class="save-btns">
+    <button class="btn btn-green" onclick="saveRecord()">💾 保存する</button>
+    <button class="btn btn-blue" onclick="saveAndNext()">＋ 追加して次層へ</button>
+  </div>
+  <div style="text-align:center;margin-top:6px">
+    <button class="btn btn-gray" onclick="resetForm()" style="padding:8px 20px">リセット</button>
+  </div>
+  <div class="notice">保存していない場合、画面を閉じると入力内容は消えます。</div>
+</div>
+
+<!-- ===== 一覧タブ ===== -->
+<div class="panel" id="panel-list">
+  <div class="action-bar">
+    <span class="count-badge" id="listCount">0件</span>
+    <button class="btn btn-white" onclick="exportCSV()" style="border:1px solid #ccc">📥 CSV出力</button>
+    <button class="btn btn-white" onclick="saveJSON()" style="border:1px solid #ccc">💾 JSON保存</button>
+    <button class="btn btn-white" onclick="loadJSON()" style="border:1px solid #ccc">📂 JSON読込</button>
+    <button class="btn btn-orange" onclick="openLedger()">🖨 写真台帳出力</button>
+    <input type="file" id="jsonFileInput" accept=".json" style="display:none" onchange="loadJSONFile(event)">
+  </div>
+  <div id="groupedList"></div>
+</div>
+
+<!-- ===== 写真台帳モーダル ===== -->
+<div class="ledger-modal" id="ledgerModal">
+  <div class="ledger-modal-bar">
+    <span>🖨 写真台帳プレビュー</span>
+    <button class="btn btn-white" onclick="window.print()" style="padding:6px 14px">印刷 / PDF保存</button>
+    <button class="btn btn-gray" onclick="closeLedger()" style="padding:6px 14px">閉じる</button>
+  </div>
+  <div class="ledger-modal-body" id="ledgerBody"></div>
+</div>
+
+<!-- ===== 設定タブ ===== -->
+<div class="panel" id="panel-settings">
+  <p style="font-size:13px;color:#555;margin-bottom:10px">端末（このブラウザ）にデータを保存・復元します。</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+    <button class="btn btn-green" onclick="saveToLocal()">📱 端末に保存</button>
+    <button class="btn btn-blue" onclick="loadFromLocal()">📲 端末から復元</button>
+    <button class="btn btn-white" onclick="saveJSON()" style="border:1px solid #ccc">💾 JSONダウンロード</button>
+    <button class="btn btn-white" onclick="loadJSON()" style="border:1px solid #ccc">📂 JSONファイル読込</button>
+    <button class="btn btn-red" onclick="clearLocal()">🗑 端末保存を消す</button>
+  </div>
+  <hr style="margin:14px 0">
+  <h3 style="font-size:14px;margin-bottom:8px">選択肢マスタ（追加）</h3>
+  <div id="masterEditor"></div>
+</div>
+
+<script>
+// ===== 土色マスタ（全件389件）=====
+const DOUSHOKU = {
+</script>
+<script id="colorData">
+</script>
+<script>
+// 土色マスタをインラインで定義
+const COLOR_MASTER_RAW = [
+["7.5R7/1","明赤灰"],["7.5R6/1","赤灰"],["7.5R5/1","赤灰"],["7.5R4/1","暗赤杯"],["7.5R3/1","暗赤杯"],["7.5R2/1","赤黒"],["7.5R1.7/1","赤黒"],["7.5R6/2","灰赤"],["7.5R5/2","灰赤"],["7.5R4/2","灰赤"],["7.5R3/2","暗赤褐"],["7.5R2/2","極暗赤褐"],["7.5R5/3","にぶい赤褐"],["7.5R4/3","にぶい赤褐"],["7.5R3/3","暗赤褐"],["7.5R2/3","極暗赤褐"],["7.5R4/4","にぶい赤"],["7.5R3/4","暗赤"],["7.5R4/6","赤"],["7.5R3/6","暗赤"],["7.5R4/8","赤"],
+["10R7/1","明赤灰"],["10R6/1","赤灰"],["10R5/1","赤灰"],["10R4/1","暗赤灰"],["10R3/1","暗赤灰"],["10R2/1","赤黒"],["10R1.7/1","赤黒"],["10R6/2","灰赤"],["10R5/2","灰赤"],["10R4/2","灰赤"],["10R3/2","暗赤褐"],["10R2/2","極暗赤褐"],["10R6/3","にぶい赤褐"],["10R5/3","赤褐"],["10R4/3","赤褐"],["10R3/3","暗赤褐"],["10R2/3","極暗赤褐"],["10R6/4","にぶい赤褐"],["10R5/4","赤褐"],["10R4/4","赤褐"],["10R3/4","暗赤"],["10R6/6","赤橙"],["10R5/6","赤"],["10R4/6","赤"],["10R3/6","暗赤"],["10R6/8","赤橙"],["10R5/8","赤"],["10R4/8","赤"],
+["2.5YR7/1","明赤灰"],["2.5YR6/1","赤灰"],["2.5YR5/1","赤灰"],["2.5YR4/1","赤灰"],["2.5YR3/1","暗赤灰"],["2.5YR2/1","赤黒"],["2.5YR1.7/1","赤黒"],["2.5YR7/2","明赤灰"],["2.5YR6/2","灰赤"],["2.5YR5/2","灰赤"],["2.5YR4/2","灰赤"],["2.5YR3/2","暗赤褐"],["2.5YR2/2","極暗赤褐"],["2.5YR7/3","淡赤橙"],["2.5YR6/3","にぶい橙"],["2.5YR5/3","にぶい赤褐"],["2.5YR4/3","にぶい赤褐"],["2.5YR3/3","暗赤褐"],["2.5YR2/3","極暗赤褐"],["2.5YR7/4","淡赤橙"],["2.5YR6/4","にぶい橙"],["2.5YR5/4","にぶい赤褐"],["2.5YR4/4","にぶい赤褐"],["2.5YR3/4","暗赤褐"],["2.5YR2/4","極暗赤褐"],["2.5YR7/6","橙"],["2.5YR6/6","橙"],["2.5YR5/6","明赤褐"],["2.5YR4/6","赤褐"],["2.5YR3/6","暗赤褐"],["2.5YR7/8","橙"],["2.5YR6/8","橙"],["2.5YR5/8","明赤褐"],["2.5YR4/8","赤褐"],
+["5YR8/1","灰白"],["5YR7/1","明褐灰"],["5YR6/1","褐灰"],["5YR5/1","褐灰"],["5YR4/1","褐灰"],["5YR3/1","暗褐"],["5YR7/2","明褐灰"],["5YR6/2","灰褐"],["5YR5/2","灰褐"],["5YR4/2","灰褐"],["5YR3/2","暗褐"],["5YR7/3","にぶい橙"],["5YR6/3","にぶい橙"],["5YR5/3","にぶい赤褐"],["5YR4/3","にぶい赤褐"],["5YR3/3","暗赤褐"],["5YR7/4","にぶい橙"],["5YR6/4","にぶい橙"],["5YR5/4","にぶい赤褐"],["5YR4/4","にぶい赤褐"],["5YR3/4","暗赤褐"],["5YR7/6","橙"],["5YR6/6","橙"],["5YR5/6","明赤褐"],["5YR4/6","赤褐"],["5YR3/6","暗赤褐"],["5YR7/8","橙"],["5YR6/8","橙"],["5YR5/8","明赤褐"],["5YR4/8","赤褐"],
+["7.5YR8/1","灰白"],["7.5YR7/1","明褐灰"],["7.5YR6/1","褐灰"],["7.5YR5/1","褐灰"],["7.5YR4/1","褐灰"],["7.5YR3/1","暗褐"],["7.5YR8/2","灰白"],["7.5YR7/2","明褐灰"],["7.5YR6/2","灰褐"],["7.5YR5/2","灰褐"],["7.5YR4/2","灰褐"],["7.5YR3/2","暗褐"],["7.5YR8/3","浅黄橙"],["7.5YR7/3","にぶい橙"],["7.5YR6/3","にぶい橙"],["7.5YR5/3","にぶい褐"],["7.5YR4/3","にぶい褐"],["7.5YR3/3","暗褐"],["7.5YR8/4","浅黄橙"],["7.5YR7/4","にぶい橙"],["7.5YR6/4","にぶい橙"],["7.5YR5/4","にぶい褐"],["7.5YR4/4","にぶい褐"],["7.5YR3/4","暗褐"],["7.5YR8/6","浅黄橙"],["7.5YR7/6","橙"],["7.5YR6/6","橙"],["7.5YR5/6","明褐"],["7.5YR4/6","褐"],["7.5YR3/6","暗褐"],["7.5YR8/8","浅黄橙"],["7.5YR7/8","橙"],["7.5YR6/8","橙"],["7.5YR5/8","明褐"],["7.5YR4/8","褐"],
+["10YR8/1","灰白"],["10YR7/1","灰白"],["10YR6/1","褐灰"],["10YR5/1","褐灰"],["10YR4/1","褐灰"],["10YR3/1","暗褐"],["10YR2/1","黒褐"],["10YR8/2","灰白"],["10YR7/2","灰黄褐"],["10YR6/2","灰黄褐"],["10YR5/2","灰黄褐"],["10YR4/2","灰黄褐"],["10YR3/2","黒褐"],["10YR2/2","黒褐"],["10YR8/3","浅黄橙"],["10YR7/3","にぶい黄橙"],["10YR6/3","にぶい黄橙"],["10YR5/3","にぶい黄褐"],["10YR4/3","にぶい黄褐"],["10YR3/3","暗褐"],["10YR2/3","黒褐"],["10YR8/4","浅黄橙"],["10YR7/4","にぶい黄橙"],["10YR6/4","にぶい黄橙"],["10YR5/4","にぶい黄褐"],["10YR4/4","褐"],["10YR3/4","暗褐"],["10YR2/4","暗褐"],["10YR8/6","黄橙"],["10YR7/6","明黄褐"],["10YR6/6","明黄褐"],["10YR5/6","黄褐"],["10YR4/6","褐"],["10YR3/6","暗褐"],["10YR8/8","黄橙"],["10YR7/8","黄橙"],["10YR6/8","明黄褐"],["10YR5/8","黄褐"],
+["2.5Y8/1","灰白"],["2.5Y7/1","灰白"],["2.5Y6/1","黄灰"],["2.5Y5/1","黄灰"],["2.5Y4/1","黄灰"],["2.5Y8/2","灰白"],["2.5Y7/2","灰黄"],["2.5Y6/2","灰黄"],["2.5Y5/2","暗灰黄"],["2.5Y4/2","暗灰黄"],["2.5Y8/3","淡黄"],["2.5Y7/3","浅黄"],["2.5Y6/3","にぶい黄"],["2.5Y5/3","にぶい黄褐"],["2.5Y4/3","オリーブ褐"],["2.5Y8/4","淡黄"],["2.5Y7/4","浅黄"],["2.5Y6/4","にぶい黄"],["2.5Y5/4","黄褐"],["2.5Y4/4","オリーブ褐"],["2.5Y8/6","黄"],["2.5Y7/6","明黄褐"],["2.5Y6/6","明黄褐"],["2.5Y5/6","黄褐"],["2.5Y8/8","黄"],["2.5Y7/8","黄"],["2.5Y6/8","明黄褐"],
+["5Y8/1","灰白"],["5Y7/1","灰白"],["5Y6/1","灰白"],["5Y5/1","黄灰"],["5Y4/1","灰"],["5Y3/1","オリーブ黒"],["5Y8/2","灰白"],["5Y7/2","灰白"],["5Y6/2","灰オリーブ"],["5Y5/2","灰オリーブ"],["5Y4/2","灰オリーブ"],["5Y8/3","淡黄"],["5Y7/3","浅黄"],["5Y6/3","オリーブ黄"],["5Y5/3","灰オリーブ"],["5Y4/3","オリーブ"],["5Y8/4","淡黄"],["5Y7/4","浅黄"],["5Y6/4","オリーブ黄"],["5Y5/4","灰オリーブ"],["5Y8/6","黄"],["5Y7/6","黄"],["5Y6/6","オリーブ黄"],
+["N9/","白"],["N8/","灰白"],["N7/","灰白"],["N6/","灰"],["N5/","灰"],["N4/","灰"],["N3/","暗灰"],["N2/","黒"],["N1.5/","黒"],
+["2.5GY7/1","灰白"],["2.5GY6/1","灰"],["2.5GY5/1","灰"],["2.5GY4/1","暗灰"],["2.5GY6/2","オリーブ灰"],["2.5GY5/2","オリーブ灰"],["2.5GY4/2","暗オリーブ灰"],["2.5GY6/4","灰オリーブ"],["2.5GY5/4","灰オリーブ"],
+["5GY6/1","灰"],["5GY5/1","灰"],["5GY4/1","暗灰"],["5GY6/2","オリーブ灰"],["5GY5/2","オリーブ灰"],
+["7.5GY6/1","灰"],["7.5GY5/1","灰"],["7.5GY4/1","暗灰"],
+["10GY6/1","灰"],["10GY5/1","灰"],["10GY4/1","暗灰"],
+["5G6/1","灰"],["5G5/1","灰"],["5G4/1","暗灰"],
+["10G6/1","灰"],["10G5/1","灰"],["10G4/1","暗灰"],
+["5BG6/1","青灰"],["5BG5/1","青灰"],["5BG4/1","暗青灰"],
+["10BG6/1","青灰"],["10BG5/1","青灰"],["10BG4/1","暗青灰"],
+["5B6/1","青灰"],["5B5/1","青灰"],["5B4/1","暗青灰"],
+["5PB6/1","青灰"],["5PB5/1","青灰"],["5PB4/1","暗青灰"],
+["5P6/1","赤紫灰"],["5P5/1","赤紫灰"],["5P4/1","暗赤紫灰"],
+["5RP6/1","赤紫灰"],["5RP5/1","赤紫灰"],["5RP4/1","暗赤紫灰"],
+["5R7/1","明赤灰"],["5R6/1","赤灰"],["5R5/1","赤灰"],["5R4/1","暗赤灰"],["5R3/1","暗赤灰"],["5R2/1","赤黒"],["5R1.7/1","赤黒"],
+// 追加分（113件）
+["5YR2/1","黒褐"],["5YR1.7/1","黒"],["5YR8/2","灰白"],["5YR2/2","黒褐"],["5YR8/3","淡橙"],["5YR2/3","極暗赤褐"],["5YR8/4","淡橙"],["5YR2/4","極暗赤褐"],
+["7.5YR2/1","黒"],["7.5YR1.7/1","黒"],["7.5YR2/2","黒褐"],["7.5YR2/3","極暗褐"],
+["10YR1.7/1","黒"],
+["2.5Y3/1","黒褐"],["2.5Y2/1","黒"],["2.5Y3/2","黒褐"],["2.5Y3/3","暗オリーブ褐"],["2.5Y4/6","オリーブ褐"],
+["5Y2/1","黒"],["5Y3/2","オリーブ黒"],["5Y2/2","オリーブ黒"],["5Y4/4","暗オリーブ"],["5Y5/6","オリーブ"],["5Y8/8","黄"],["5Y7/8","黄"],["5Y6/8","オリーブ"],
+["7.5Y8/1","灰白"],["7.5Y7/1","灰白"],["7.5Y6/1","灰"],["7.5Y5/1","灰"],["7.5Y4/1","灰"],["7.5Y3/1","オリーブ黒"],["7.5Y2/1","黒"],
+["7.5Y8/2","灰白"],["7.5Y7/2","灰白"],["7.5Y6/2","灰オリーブ"],["7.5Y5/2","灰オリーブ"],["7.5Y4/2","灰オリーブ"],["7.5Y3/2","オリーブ黒"],["7.5Y2/2","オリーブ黒"],
+["7.5Y8/3","淡黄"],["7.5Y7/3","浅黄"],["7.5Y6/3","オリーブ黄"],["7.5Y5/3","灰オリーブ"],["7.5Y4/3","暗オリーブ"],
+["10Y8/1","灰白"],["10Y7/1","灰白"],["10Y6/1","灰"],["10Y5/1","灰"],["10Y4/1","灰"],["10Y3/1","オリーブ黒"],["10Y2/1","黒"],
+["10Y8/2","灰白"],["10Y7/2","灰白"],["10Y6/2","オリーブ灰"],["10Y5/2","オリーブ灰"],["10Y4/2","オリーブ灰"],["10Y3/2","オリーブ黒"],
+["N8/0","灰白"],["N7/0","灰白"],["N6/0","灰"],["N5/0","灰"],["N4/0","灰"],["N3/0","暗灰"],["N2/0","黒"],["N1.5/0","黒"],
+["2.5GY8/1","灰白"],["2.5GY3/1","暗オリーブ灰"],["2.5GY2/1","黒"],
+["5GY8/1","灰白"],["5GY7/1","明オリーブ灰"],["5GY3/1","暗オリーブ灰"],["5GY2/1","オリーブ黒"],
+["7.5GY8/1","明緑灰"],["7.5GY7/1","明緑灰"],["7.5GY3/1","暗緑灰"],["7.5GY2/1","緑黒"],
+["10GY8/1","明緑灰"],["10GY7/1","明緑灰"],["10GY3/1","暗緑灰"],["10GY2/1","緑黒"],
+["5G7/1","明緑灰"],["5G3/1","暗緑灰"],["5G2/1","緑黒"],["5G1.7/1","緑黒"],
+["10G7/1","明緑灰"],["10G3/1","暗緑灰"],["10G2/1","緑黒"],["10G1.7/1","緑黒"],
+["5BG7/1","明青灰"],["5BG3/1","暗青灰"],["5BG2/1","青黒"],["5BG1.7/1","青黒"],
+["10BG7/1","明青灰"],["10BG3/1","暗青灰"],["10BG2/1","青黒"],["10BG1.7/1","青黒"],
+["5B7/1","明青灰"],["5B3/1","暗青灰"],["5B2/1","青黒"],["5B1.7/1","青黒"],
+["5PB7/1","明青灰"],["5PB3/1","暗青灰"],["5PB2/1","青黒"],["5PB1.7/1","青黒"],
+["5P7/1","明紫灰"],["5P3/1","暗紫灰"],["5P2/1","紫黒"],["5P1.7/1","紫黒"],
+["5RP7/1","明紫灰"],["5RP3/1","暗紫灰"],["5RP2/1","紫黒"],["5RP1.7/1","紫黒"]
+];
+
+// マスタをオブジェクトに変換
+const COLOR_MASTER = {};
+COLOR_MASTER_RAW.forEach(([code, name]) => { COLOR_MASTER[code] = name; });
+
+// ===== 選択肢マスタ =====
+const MASTERS = {
+  ikoType: ['SA','SB','SC','SD','SE','SF','SG','SH','SI','SJ','SK','SL','SM','SN','SO','SP','SS','ST','SU','SW','SX','SY','SZ','NR'],
+  spl: ['','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z'],
+  hue: ['','7.5R','10R','2.5YR','5YR','7.5YR','10YR','2.5Y','5Y','7.5Y','10Y','N','2.5GY','5GY','7.5GY','10GY','5G','10G','5BG','10BG','5B','5PB','5P','5RP','5R'],
+  value_: ['','1.5','1.7','2','3','4','5','6','7','8'],
+  chroma: ['','0','1','2','3','4','6','8'],
+  doshu: ['','土','粘土','ローム','シルト','粘土質シルト','砂質シルト','砂','細粒砂','中粒砂','粗粒砂'],
+  shimari: ['','非常に強い','強い','やや強い','やや弱い','弱い'],
+  nendo: ['','強い','やや強い','やや弱い','弱い'],
+  konnyuType: ['ローム','炭化物','焼土','白色粘土','貝','赤色スコリア','黒色スコリア','白色粒子','砂粒','礫','小礫','円礫','暗褐色土','茶褐色土','黄褐色土'],
+  konnyuKata: ['粒','ブロック','粒子'],
+  konnyuMm: ['','1','2','3','4','5','6','7','8','9','10','15','20','30','40','50','100'],
+  konnyuRyo: ['極多量','多量','中量','少量','微量'],
+  konnyuIri: ['','斑状','ラミナ状'],
+  unit: ['mm','cm']
+};
+
+// localStorage追加マスタをマージ
+function loadLocalMasters() {
+  try {
+    const saved = localStorage.getItem('dosoMasters');
+    if (saved) {
+      const m = JSON.parse(saved);
+      Object.keys(m).forEach(k => {
+        if (MASTERS[k]) {
+          m[k].forEach(v => { if (!MASTERS[k].includes(v)) MASTERS[k].push(v); });
+        }
+      });
+    }
+  } catch(e) {}
+}
+
+// ===== データ =====
+let records = [];
+let editIndex = -1;
+let konnyuCounter = 0;
+
+// ===== 初期化 =====
+function init() {
+  loadLocalMasters();
+  buildSelects();
+  buildMasterEditor();
+  renderList();
+  updatePreview();
+}
+
+function buildSelects() {
+  // 遺構番号 01〜99
+  const ikoNumEl = document.getElementById('ikoNum');
+  ikoNumEl.innerHTML = '<option value="">--</option>';
+  for (let i = 1; i <= 99; i++) {
+    const v = String(i).padStart(2, '0');
+    const o = document.createElement('option');
+    o.value = v; o.textContent = v;
+    ikoNumEl.appendChild(o);
+  }
+  ikoNumEl.addEventListener('change', updatePreview);
+
+  // 層番 1〜99
+  const sobanEl = document.getElementById('soban');
+  sobanEl.innerHTML = '<option value="">--</option>';
+  for (let i = 1; i <= 99; i++) {
+    const o = document.createElement('option');
+    o.value = String(i); o.textContent = String(i);
+    sobanEl.appendChild(o);
+  }
+  sobanEl.addEventListener('change', updatePreview);
+
+  const defs = [
+    ['ikoType', 'ikoType'],
+    ['spl', 'spl'],
+    ['hue', 'hue'],
+    ['value_', 'value_'],
+    ['chroma', 'chroma'],
+    ['doshu', 'doshu'],
+    ['shimari', 'shimari'],
+    ['nendo', 'nendo'],
+  ];
+  defs.forEach(([id, key]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = '';
+    MASTERS[key].forEach(v => {
+      const o = document.createElement('option');
+      o.value = v; o.textContent = v || '---';
+      el.appendChild(o);
+    });
+    el.addEventListener('change', updatePreview);
+  });
+  document.getElementById('seikaku').addEventListener('input', updatePreview);
+  document.getElementById('biko').addEventListener('input', updatePreview);
+}
+
+// ===== 土色検索 =====
+function getColorName(hue, val, chr) {
+  if (!hue || !val || !chr) return null;
+  // N系は特殊
+  if (hue === 'N') {
+    const key = `N${val}/`;
+    return COLOR_MASTER[key] || null;
+  }
+  const key = `${hue}${val}/${chr}`;
+  return COLOR_MASTER[key] || null;
+}
+
+function updateColor() { updatePreview(); }
+
+function updatePreview() {
+  const ikoType = document.getElementById('ikoType').value;
+  const ikoNum  = document.getElementById('ikoNum').value;
+  const spl     = document.getElementById('spl').value;
+  const soban   = document.getElementById('soban').value;
+  const hue     = document.getElementById('hue').value;
+  const val     = document.getElementById('value_').value;
+  const chr     = document.getElementById('chroma').value;
+  const doshu   = document.getElementById('doshu').value;
+  const shimari = document.getElementById('shimari').value;
+  const nendo   = document.getElementById('nendo').value;
+  const seikaku = document.getElementById('seikaku').value.trim();
+
+  // 遺構コード
+  const code = ikoType && ikoNum ? `${ikoType}${ikoNum}` : '-';
+  document.getElementById('prev_code').textContent = code;
+
+  // 色コード
+  const colorCode = hue && val && chr ? (hue === 'N' ? `N${val}/` : `${hue}${val}/${chr}`) : '-';
+  document.getElementById('prev_colorcode').textContent = colorCode;
+
+  // 土色名
+  const colorName = getColorName(hue, val, chr);
+  const prevColor = document.getElementById('prev_color');
+  if (colorName) {
+    prevColor.textContent = colorName;
+    prevColor.className = 'preview-val auto';
+  } else if (hue && val && chr) {
+    prevColor.textContent = '※マスタ未登録';
+    prevColor.className = 'preview-val empty';
+  } else {
+    prevColor.textContent = '-';
+    prevColor.className = 'preview-val';
+  }
+
+  // 混入物記載文
+  const konnyuText = buildKonnyuText();
+  document.getElementById('prev_konnyu').textContent = konnyuText || '（混入物なし）';
+
+  // 全体記載文
+  let parts = [];
+  if (colorCode !== '-' && colorName) parts.push(`${colorCode}（${colorName}）`);
+  if (doshu) parts.push(doshu);
+  if (shimari) parts.push(`締り${shimari}`);
+  if (nendo) parts.push(`粘性${nendo}`);
+  if (konnyuText) parts.push(konnyuText);
+  if (seikaku) parts.push(seikaku);
+  const allText = parts.join('。');
+  document.getElementById('prev_all').textContent = allText || '（入力中）';
+}
+
+// ===== 混入物 =====
+function addKonnyu(data) {
+  const id = ++konnyuCounter;
+  const div = document.createElement('div');
+  div.className = 'konkyu-item';
+  div.id = `konnyu_${id}`;
+
+  const typeOpts = MASTERS.konnyuType.map(v => `<option value="${v}" ${data&&data.type===v?'selected':''}>${v}</option>`).join('');
+  const kataOpts = `<option value=""></option>` + MASTERS.konnyuKata.map(v => `<option value="${v}" ${data&&data.kata===v?'selected':''}>${v}</option>`).join('');
+  const mmOpts   = MASTERS.konnyuMm.map(v => `<option value="${v}" ${data&&data.mmMin===v?'selected':''}>${v||'---'}</option>`).join('');
+  const mmOpts2  = MASTERS.konnyuMm.map(v => `<option value="${v}" ${data&&data.mmMax===v?'selected':''}>${v||'---'}</option>`).join('');
+  const ryoOpts  = MASTERS.konnyuRyo.map(v => `<option value="${v}" ${data&&data.ryo===v?'selected':''}>${v}</option>`).join('');
+  const iriOpts  = `<option value=""></option>` + MASTERS.konnyuIri.map(v => `<option value="${v}" ${data&&data.iri===v?'selected':''}>${v}</option>`).join('');
+  const unitOpts = MASTERS.unit.map(v => `<option value="${v}" ${data&&data.unit===v?'selected':''}>${v}</option>`).join('');
+
+  div.innerHTML = `
+    <button class="remove-btn" onclick="removeKonnyu(${id})">✕</button>
+    <div class="konkyu-row">
+      <div>
+        <div class="konkyu-label">種類</div>
+        <select onchange="updatePreview()">${typeOpts}</select>
+      </div>
+      <div>
+        <div class="konkyu-label">形状</div>
+        <select onchange="updatePreview()">${kataOpts}</select>
+      </div>
+      <div>
+        <div class="konkyu-label">最小</div>
+        <select onchange="updatePreview()">${mmOpts}</select>
+      </div>
+      <div>
+        <div class="konkyu-label">最大</div>
+        <select onchange="updatePreview()">${mmOpts2}</select>
+      </div>
+      <div>
+        <div class="konkyu-label">単位</div>
+        <select onchange="updatePreview()">${unitOpts}</select>
+      </div>
+      <div>
+        <div class="konkyu-label">量</div>
+        <select onchange="updatePreview()">${ryoOpts}</select>
+      </div>
+    </div>
+    <div style="margin-top:4px">
+      <div class="konkyu-label" style="text-align:left">含み方</div>
+      <select onchange="updatePreview()" style="width:100%">${iriOpts}</select>
+    </div>
+  `;
+  document.getElementById('konnyuList').appendChild(div);
+  updatePreview();
+}
+
+function removeKonnyu(id) {
+  const el = document.getElementById(`konnyu_${id}`);
+  if (el) el.remove();
+  updatePreview();
+}
+
+function getKonnyuData() {
+  const items = document.querySelectorAll('.konkyu-item');
+  return Array.from(items).map(item => {
+    const sels = item.querySelectorAll('select');
+    return {
+      type: sels[0].value,
+      kata: sels[1].value,
+      mmMin: sels[2].value,
+      mmMax: sels[3].value,
+      unit: sels[4].value,
+      ryo: sels[5].value,
+      iri: sels[6].value
+    };
+  });
+}
+
+function buildKonnyuText() {
+  const data = getKonnyuData();
+  if (!data.length) return '';
+  return data.map(d => {
+    let s = d.type;
+    if (d.kata) s += `（${d.kata}）`;
+    if (d.mmMin && d.mmMax) {
+      const a = Math.min(Number(d.mmMin)||0, Number(d.mmMax)||0);
+      const b = Math.max(Number(d.mmMin)||0, Number(d.mmMax)||0);
+      if (a === b) s += `（φ${a}${d.unit}）`;
+      else s += `（φ${a}〜${b}${d.unit}）`;
+    } else if (d.mmMin) {
+      s += `（φ${d.mmMin}${d.unit}）`;
+    }
+    if (d.ryo) s += `を${d.ryo}`;
+    if (d.iri) s += `・${d.iri}`;
+    s += '含む';
+    return s;
+  }).join('、');
+}
+
+// ===== レコード操作 =====
+function collectForm() {
+  const hue = document.getElementById('hue').value;
+  const val = document.getElementById('value_').value;
+  const chr = document.getElementById('chroma').value;
+  const colorCode = hue && val && chr ? (hue==='N' ? `N${val}/` : `${hue}${val}/${chr}`) : '';
+  const colorName = getColorName(hue, val, chr) || '';
+  const konnyuData = getKonnyuData();
+  const konnyuText = buildKonnyuText();
+
+  const doshu   = document.getElementById('doshu').value;
+  const shimari = document.getElementById('shimari').value;
+  const nendo   = document.getElementById('nendo').value;
+  const seikaku = document.getElementById('seikaku').value.trim();
+
+  let allParts = [];
+  if (colorCode && colorName) allParts.push(`${colorCode}（${colorName}）`);
+  if (doshu)   allParts.push(doshu);
+  if (shimari) allParts.push(`締り${shimari}`);
+  if (nendo)   allParts.push(`粘性${nendo}`);
+  if (konnyuText) allParts.push(konnyuText);
+  if (seikaku) allParts.push(seikaku);
+
+  return {
+    ikoType: document.getElementById('ikoType').value,
+    ikoNum:  document.getElementById('ikoNum').value.trim(),
+    spl:     document.getElementById('spl').value,
+    soban:   document.getElementById('soban').value,
+    hue, value: val, chroma: chr,
+    colorCode, colorName,
+    doshu, shimari, nendo, seikaku,
+    konnyuData,
+    konnyuText,
+    biko: document.getElementById('biko').value.trim(),
+    allText: allParts.join('。')
+  };
+}
+
+// ===== 自動保存 =====
+function autoSave() {
+  try {
+    localStorage.setItem('dosoRecords', JSON.stringify(records));
+    localStorage.setItem('dosoPhotos', JSON.stringify(groupPhotos));
+    const now = new Date();
+    const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
+    localStorage.setItem('dosoAutoSaveTime', timeStr);
+    const el = document.getElementById('autoSaveStatus');
+    if (el) {
+      el.textContent = `✅ 自動保存：${timeStr}`;
+      el.style.color = '#7dff9e';
+      setTimeout(() => { el.style.color = '#aad'; }, 2000);
+    }
+  } catch(e) {
+    const el = document.getElementById('autoSaveStatus');
+    if (el) { el.textContent = '⚠️ 自動保存失敗（容量不足）'; el.style.color = '#ffaa44'; }
+  }
+}
+
+function saveRecord() {
+  const r = collectForm();
+  if (!r.ikoType || !r.ikoNum || !r.soban) {
+    alert('遺構種別・遺構番号・層番は必須です。');
+    return;
+  }
+  if (editIndex >= 0) {
+    records[editIndex] = r;
+    editIndex = -1;
+  } else {
+    records.push(r);
+  }
+  renderList();
+  updateBadge();
+  autoSave();
+  resetForm();
+  switchTab('list');
+}
+
+function saveAndNext() {
+  const r = collectForm();
+  if (!r.ikoType || !r.ikoNum || !r.soban) {
+    alert('遺構種別・遺構番号・層番は必須です。');
+    return;
+  }
+  records.push(r);
+  renderList();
+  updateBadge();
+  autoSave();
+  const nextSoban = Math.min((parseInt(r.soban)||0) + 1, 99);
+  // 混入物は残す・層番・備考・性格だけリセット
+  document.getElementById('soban').value = String(nextSoban);
+  document.getElementById('biko').value = '';
+  document.getElementById('seikaku').value = '';
+  updatePreview();
+  alert(`層番 ${r.soban} を保存しました。次の層番 ${nextSoban} を入力してください。`);
+}
+
+function resetForm() {
+  editIndex = -1;
+  document.getElementById('ikoNum').value = '';
+  document.getElementById('spl').value = '';
+  document.getElementById('soban').value = '';
+  document.getElementById('hue').value = '';
+  document.getElementById('value_').value = '';
+  document.getElementById('chroma').value = '';
+  document.getElementById('doshu').value = '';
+  document.getElementById('shimari').value = '';
+  document.getElementById('nendo').value = '';
+  document.getElementById('seikaku').value = '';
+  document.getElementById('biko').value = '';
+  document.getElementById('konnyuList').innerHTML = '';
+  updatePreview();
+}
+
+function editRecord(i) {
+  const r = records[i];
+  editIndex = i;
+  document.getElementById('ikoType').value  = r.ikoType || '';
+  document.getElementById('ikoNum').value   = r.ikoNum  || '';
+  document.getElementById('spl').value      = r.spl     || '';
+  document.getElementById('soban').value    = r.soban   || '';
+  document.getElementById('hue').value      = r.hue     || '';
+  document.getElementById('value_').value   = r.value   || '';
+  document.getElementById('chroma').value   = r.chroma  || '';
+  document.getElementById('doshu').value    = r.doshu   || '';
+  document.getElementById('shimari').value  = r.shimari || '';
+  document.getElementById('nendo').value    = r.nendo   || '';
+  document.getElementById('seikaku').value  = r.seikaku || '';
+  document.getElementById('biko').value     = r.biko    || '';
+  document.getElementById('konnyuList').innerHTML = '';
+  (r.konnyuData || []).forEach(d => addKonnyu(d));
+  updatePreview();
+  switchTab('input');
+}
+
+function deleteRecord(i) {
+  if (!confirm('この記録を削除しますか？')) return;
+  records.splice(i, 1);
+  renderList();
+  updateBadge();
+}
+
+// ===== 一覧レンダリング（アコーディオン） =====
+// 開閉状態を記憶
+const openGroups = new Set();
+
+// 写真データ: { [遺構コード]: [{id, dataUrl, caption}] }
+const groupPhotos = {};
+
+function renderList() {
+  const container = document.getElementById('groupedList');
+  container.innerHTML = '';
+
+  if (!records.length) {
+    container.innerHTML = '<p style="color:#888;text-align:center;margin-top:20px">データがありません。</p>';
+    document.getElementById('listCount').textContent = '0件';
+    document.getElementById('countBadge').textContent = '0';
+    return;
+  }
+
+  // 遺構コード（種別+番号）ごとにグループ化
+  const groups = {};
+  records.forEach((r, i) => {
+    const code = `${r.ikoType}${(r.ikoNum||'').padStart(2,'0')}`;
+    if (!groups[code]) groups[code] = [];
+    groups[code].push({ r, i });
+  });
+
+  // 遺構コード順にソート
+  const sortedKeys = Object.keys(groups).sort();
+
+  sortedKeys.forEach(code => {
+    const items = groups[code];
+    const isOpen = openGroups.has(code);
+    const photos = groupPhotos[code] || [];
+
+    // グループヘッダー
+    const header = document.createElement('div');
+    header.className = 'group-header';
+    const photoCount = photos.length ? `📷${photos.length}枚` : '';
+    header.innerHTML = `
+      <div>
+        <span class="group-title">📂 ${code}</span>
+        <span class="group-meta">${items.length}層 ${photoCount}</span>
+      </div>
+      <span class="group-arrow ${isOpen ? 'open' : ''}">▶</span>
+    `;
+    header.addEventListener('click', () => toggleGroup(code));
+
+    // グループ本体
+    const body = document.createElement('div');
+    body.className = `group-body ${isOpen ? 'open' : ''}`;
+    body.id = `group_${code}`;
+
+    // 層番テーブル
+    const wrap = document.createElement('div');
+    wrap.className = 'list-table-wrap';
+    const table = document.createElement('table');
+    table.innerHTML = `
+      <thead>
+        <tr>
+          <th>層番</th><th>色コード</th><th>土色</th><th>土種</th>
+          <th>締り</th><th>粘性</th><th>混入物（概要）</th><th>操作</th>
+        </tr>
+      </thead>
+    `;
+    const tbody = document.createElement('tbody');
+    items.sort((a, b) => (parseInt(a.r.soban)||0) - (parseInt(b.r.soban)||0));
+    items.forEach(({ r, i }) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="font-weight:bold">${r.soban}</td>
+        <td>${r.colorCode||''}</td>
+        <td>${r.colorName||''}</td>
+        <td>${r.doshu||''}</td>
+        <td>${r.shimari||''}</td>
+        <td>${r.nendo||''}</td>
+        <td style="max-width:180px;font-size:12px">${r.konnyuText||''}</td>
+        <td>
+          <button class="edit-btn" onclick="editRecord(${i})">編集</button>
+          <button class="del-btn" onclick="deleteRecord(${i})">削除</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    wrap.appendChild(table);
+    body.appendChild(wrap);
+
+    // 写真エリア
+    const photoArea = document.createElement('div');
+    photoArea.className = 'photo-area';
+    photoArea.innerHTML = `<div class="photo-area-title">📷 メモ写真</div>`;
+
+    const grid = document.createElement('div');
+    grid.className = 'photo-grid';
+    grid.id = `photoGrid_${code}`;
+    photos.forEach(p => {
+      grid.appendChild(makePhotoCard(code, p));
+    });
+    photoArea.appendChild(grid);
+
+    // 写真追加ボタン（カメラとライブラリを分ける）
+    const btnWrap = document.createElement('div');
+    btnWrap.className = 'photo-add-btns';
+
+    const camBtn = document.createElement('button');
+    camBtn.className = 'photo-add-btn';
+    camBtn.textContent = '📷 カメラ撮影';
+    camBtn.addEventListener('click', () => triggerPhotoInput(code, 'camera'));
+
+    const libBtn = document.createElement('button');
+    libBtn.className = 'photo-add-btn';
+    libBtn.textContent = '🖼 ライブラリから選択';
+    libBtn.addEventListener('click', () => triggerPhotoInput(code, 'library'));
+
+    btnWrap.appendChild(camBtn);
+    btnWrap.appendChild(libBtn);
+    photoArea.appendChild(btnWrap);
+
+    // カメラ用（capture=environment）
+    const camInput = document.createElement('input');
+    camInput.type = 'file';
+    camInput.accept = 'image/*';
+    camInput.capture = 'environment';
+    camInput.multiple = true;
+    camInput.className = 'photo-input';
+    camInput.id = `photoCamInput_${code}`;
+    camInput.addEventListener('change', e => handlePhotoInput(e, code));
+    photoArea.appendChild(camInput);
+
+    // ライブラリ用（captureなし）
+    const libInput = document.createElement('input');
+    libInput.type = 'file';
+    libInput.accept = 'image/*';
+    libInput.multiple = true;
+    libInput.className = 'photo-input';
+    libInput.id = `photoLibInput_${code}`;
+    libInput.addEventListener('change', e => handlePhotoInput(e, code));
+    photoArea.appendChild(libInput);
+
+    body.appendChild(photoArea);
+    container.appendChild(header);
+    container.appendChild(body);
+  });
+
+  document.getElementById('listCount').textContent = `${records.length}件`;
+  document.getElementById('countBadge').textContent = records.length;
+}
+
+function makePhotoCard(code, p) {
+  const card = document.createElement('div');
+  card.className = 'photo-card';
+  card.id = `photo_${p.id}`;
+  card.innerHTML = `
+    <img src="${p.dataUrl}" alt="${p.caption||''}">
+    <div class="photo-caption" title="${p.caption||''}">${p.caption||'（メモなし）'}</div>
+    <button class="photo-del" onclick="deletePhoto('${code}','${p.id}')">✕</button>
+    <button class="photo-edit-btn" onclick="openDrawModal('${code}','${p.id}')">✏️</button>
+  `;
+  card.querySelector('img').addEventListener('click', () => editCaption(code, p.id));
+  return card;
+}
+
+function triggerPhotoInput(code, type) {
+  const id = type === 'camera' ? `photoCamInput_${code}` : `photoLibInput_${code}`;
+  const input = document.getElementById(id);
+  if (input) input.click();
+}
+
+function handlePhotoInput(e, code) {
+  const files = Array.from(e.target.files);
+  if (!files.length) return;
+  if (!groupPhotos[code]) groupPhotos[code] = [];
+  let loaded = 0;
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const id = `p_${Date.now()}_${Math.random().toString(36).slice(2,6)}`;
+      const caption = prompt(`写真「${file.name}」のメモを入力してください（スキップ可）:`) || '';
+      groupPhotos[code].push({ id, dataUrl: ev.target.result, caption });
+      loaded++;
+      if (loaded === files.length) {
+        renderList();
+        // 開いていたグループを再度開く
+        openGroups.forEach(c => {
+          const b = document.getElementById(`group_${c}`);
+          const arr = document.querySelector(`#group_${c}`)?.previousElementSibling?.querySelector('.group-arrow');
+          if (b) { b.classList.add('open'); }
+          if (arr) arr.classList.add('open');
+        });
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+  e.target.value = '';
+}
+
+function deletePhoto(code, id) {
+  if (!confirm('この写真を削除しますか？')) return;
+  if (groupPhotos[code]) {
+    groupPhotos[code] = groupPhotos[code].filter(p => p.id !== id);
+  }
+  renderList();
+}
+
+function editCaption(code, id) {
+  const photos = groupPhotos[code] || [];
+  const p = photos.find(p => p.id === id);
+  if (!p) return;
+  const newCaption = prompt('メモを編集:', p.caption || '');
+  if (newCaption === null) return;
+  p.caption = newCaption;
+  renderList();
+}
+
+function toggleGroup(code) {
+  const body = document.getElementById(`group_${code}`);
+  if (!body) return;
+  const header = body.previousElementSibling;
+  const arrow = header?.querySelector('.group-arrow');
+  if (body.classList.contains('open')) {
+    body.classList.remove('open');
+    if (arrow) arrow.classList.remove('open');
+    openGroups.delete(code);
+  } else {
+    body.classList.add('open');
+    if (arrow) arrow.classList.add('open');
+    openGroups.add(code);
+  }
+}
+
+function updateBadge() {
+  document.getElementById('countBadge').textContent = records.length;
+}
+
+// ===== タブ切替 =====
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    const names = ['input','list','settings'];
+    t.classList.toggle('active', names[i] === name);
+  });
+  document.querySelectorAll('.panel').forEach(p => {
+    p.classList.toggle('active', p.id === `panel-${name}`);
+  });
+  if (name === 'list') renderList();
+}
+
+// ===== CSV出力 =====
+function exportCSV() {
+  if (!records.length) { alert('データがありません。'); return; }
+  const headers = ['遺構種別','遺構番号','SPL','層番','Hue','Value','Chroma','色コード','土色','土種','締り','粘性','性格','混入物記載文','備考','全体記載文'];
+  const rows = records.map(r => [
+    r.ikoType, r.ikoNum, r.spl, r.soban,
+    r.hue, r.value, r.chroma, r.colorCode, r.colorName,
+    r.doshu, r.shimari, r.nendo, r.seikaku,
+    r.konnyuText, r.biko, r.allText
+  ].map(v => `"${(v||'').replace(/"/g,'""')}"`));
+  const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `土層台帳_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+// ===== JSON保存・読込 =====
+function saveJSON() {
+  const defaultName = `土層台帳_${new Date().toISOString().slice(0,10)}`;
+  const inputName = prompt('保存ファイル名を入力してください（.jsonは自動付加）:', defaultName);
+  if (inputName === null) return; // キャンセル
+  const fileName = (inputName.trim() || defaultName).replace(/\.json$/i, '') + '.json';
+  const payload = { records, photos: groupPhotos };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = fileName;
+  a.click();
+}
+function loadJSON() { document.getElementById('jsonFileInput').click(); }
+function loadJSONFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const r = new FileReader();
+  r.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      // 旧形式（配列）と新形式（{records, photos}）に対応
+      const newRecords = Array.isArray(data) ? data : (data.records || []);
+      const newPhotos  = Array.isArray(data) ? {} : (data.photos || {});
+      if (!Array.isArray(newRecords)) throw new Error();
+      if (records.length && !confirm('現在のデータを置き換えますか？')) return;
+      records.length = 0;
+      newRecords.forEach(r => records.push(r));
+      Object.keys(groupPhotos).forEach(k => delete groupPhotos[k]);
+      Object.assign(groupPhotos, newPhotos);
+      renderList();
+      updateBadge();
+      alert(`${records.length}件を読み込みました。`);
+    } catch { alert('JSONの読み込みに失敗しました。'); }
+  };
+  r.readAsText(file);
+  e.target.value = '';
+}
+
+// ===== localStorage =====
+function saveToLocal() {
+  try {
+    localStorage.setItem('dosoRecords', JSON.stringify(records));
+    localStorage.setItem('dosoPhotos', JSON.stringify(groupPhotos));
+    alert('端末に保存しました。');
+  } catch(e) {
+    alert('写真データが大きすぎて端末保存できませんでした。JSON保存をお使いください。');
+  }
+}
+function loadFromLocal() {
+  const d = localStorage.getItem('dosoRecords');
+  if (!d) { alert('保存データがありません。'); return; }
+  if (records.length && !confirm('現在のデータを置き換えますか？')) return;
+  records.length = 0;
+  JSON.parse(d).forEach(r => records.push(r));
+  const p = localStorage.getItem('dosoPhotos');
+  Object.keys(groupPhotos).forEach(k => delete groupPhotos[k]);
+  if (p) Object.assign(groupPhotos, JSON.parse(p));
+  renderList();
+  updateBadge();
+  alert(`${records.length}件を復元しました。`);
+}
+function clearLocal() {
+  if (!confirm('端末保存データを消去しますか？')) return;
+  localStorage.removeItem('dosoRecords');
+  localStorage.removeItem('dosoPhotos');
+  alert('消去しました。');
+}
+
+// ===== コピー =====
+function copyAll() {
+  const text = document.getElementById('prev_all').textContent;
+  navigator.clipboard.writeText(text).then(() => alert('コピーしました。')).catch(() => {
+    prompt('以下をコピーしてください:', text);
+  });
+}
+
+// ===== マスタ編集UI =====
+function buildMasterEditor() {
+  const container = document.getElementById('masterEditor');
+  const groups = [
+    { label:'混入物 種類', key:'konnyuType' },
+    { label:'土種', key:'doshu' },
+    { label:'mm候補', key:'konnyuMm' },
+    { label:'遺構コード', key:'ikoType' },
+    { label:'含み方', key:'konnyuIri' },
+  ];
+  container.innerHTML = groups.map(g => `
+    <div style="margin-bottom:10px">
+      <div style="font-size:13px;font-weight:bold;margin-bottom:4px">${g.label}</div>
+      <div style="font-size:12px;color:#555;margin-bottom:4px">${MASTERS[g.key].join('、')}</div>
+      <div style="display:flex;gap:6px">
+        <input type="text" id="add_${g.key}" placeholder="追加する値" style="flex:1;padding:6px;border:1px solid #ccc;border-radius:4px;font-size:14px">
+        <button class="btn btn-blue" onclick="addMaster('${g.key}')" style="padding:6px 10px">追加</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function addMaster(key) {
+  const input = document.getElementById(`add_${key}`);
+  const val = input.value.trim();
+  if (!val) return;
+  if (!MASTERS[key].includes(val)) {
+    MASTERS[key].push(val);
+    // localStorageに保存
+    try {
+      const saved = JSON.parse(localStorage.getItem('dosoMasters') || '{}');
+      if (!saved[key]) saved[key] = [];
+      if (!saved[key].includes(val)) saved[key].push(val);
+      localStorage.setItem('dosoMasters', JSON.stringify(saved));
+    } catch(e) {}
+    buildSelects();
+    buildMasterEditor();
+    alert(`「${val}」を追加しました。`);
+  } else {
+    alert('すでに存在します。');
+  }
+  input.value = '';
+}
+
+// ===== 写真台帳出力 =====
+function openLedger() {
+  if (!records.length) { alert('データがありません。'); return; }
+
+  // 遺構コードごとにグループ化
+  const groups = {};
+  records.forEach((r, i) => {
+    const code = `${r.ikoType}${(r.ikoNum||'').padStart(2,'0')}`;
+    if (!groups[code]) groups[code] = [];
+    groups[code].push(r);
+  });
+
+  const body = document.getElementById('ledgerBody');
+  body.innerHTML = '';
+
+  Object.keys(groups).sort().forEach(code => {
+    const items = groups[code].sort((a,b) => (parseInt(a.soban)||0)-(parseInt(b.soban)||0));
+    const photos = groupPhotos[code] || [];
+
+    const page = document.createElement('div');
+    page.className = 'ledger-page';
+
+    // タイトル
+    const title = document.createElement('div');
+    title.className = 'ledger-page-title';
+    title.textContent = `遺構 ${code}　土層台帳`;
+    page.appendChild(title);
+
+    // 写真エリア（上）
+    if (photos.length) {
+      const photoWrap = document.createElement('div');
+      photoWrap.className = 'ledger-photos';
+      // 写真サイズ：3枚以下は大きく、4枚以上は小さく
+      const imgSize = photos.length <= 3 ? 200 : photos.length <= 6 ? 150 : 110;
+      photos.forEach(p => {
+        const item = document.createElement('div');
+        item.className = 'ledger-photo-item';
+        item.innerHTML = `
+          <img src="${p.dataUrl}" width="${imgSize}" height="${Math.round(imgSize*0.75)}" alt="">
+          <div class="ledger-photo-cap">${p.caption||''}</div>
+        `;
+        photoWrap.appendChild(item);
+      });
+      page.appendChild(photoWrap);
+    } else {
+      const noPhoto = document.createElement('div');
+      noPhoto.className = 'ledger-no-photo';
+      noPhoto.textContent = '（写真なし）';
+      page.appendChild(noPhoto);
+    }
+
+    // 区切り線
+    const hr = document.createElement('hr');
+    hr.style.cssText = 'border:none;border-top:1px solid #ccc;margin:10px 0';
+    page.appendChild(hr);
+
+    // 土層テーブル（下）
+    const table = document.createElement('table');
+    table.className = 'ledger-table';
+    table.innerHTML = `
+      <thead>
+        <tr>
+          <th style="width:40px">層番</th>
+          <th style="width:70px">色コード</th>
+          <th style="width:70px">土色</th>
+          <th style="width:50px">土種</th>
+          <th style="width:60px">締り</th>
+          <th style="width:60px">粘性</th>
+          <th>混入物</th>
+          <th style="width:80px">性格</th>
+          <th style="width:80px">備考</th>
+        </tr>
+      </thead>
+    `;
+    const tbody = document.createElement('tbody');
+    items.forEach(r => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="text-align:center;font-weight:bold">${r.soban||''}</td>
+        <td>${r.colorCode||''}</td>
+        <td>${r.colorName||''}</td>
+        <td>${r.doshu||''}</td>
+        <td>${r.shimari||''}</td>
+        <td>${r.nendo||''}</td>
+        <td style="font-size:10px">${r.konnyuText||''}</td>
+        <td>${r.seikaku||''}</td>
+        <td style="font-size:10px">${r.biko||''}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    page.appendChild(table);
+    body.appendChild(page);
+  });
+
+  document.getElementById('ledgerModal').classList.add('open');
+}
+
+function closeLedger() {
+  document.getElementById('ledgerModal').classList.remove('open');
+}
+
+// ===== 起動 =====
+function init() {
+  loadLocalMasters();
+  buildSelects();
+  buildMasterEditor();
+
+  // 起動時に自動復元
+  const saved = localStorage.getItem('dosoRecords');
+  if (saved) {
+    try {
+      const data = JSON.parse(saved);
+      if (Array.isArray(data) && data.length > 0) {
+        data.forEach(r => records.push(r));
+        const p = localStorage.getItem('dosoPhotos');
+        if (p) Object.assign(groupPhotos, JSON.parse(p));
+        renderList();
+        updateBadge();
+        const timeStr = localStorage.getItem('dosoAutoSaveTime') || '';
+        const el = document.getElementById('autoSaveStatus');
+        if (el) el.textContent = `✅ 自動保存：${timeStr}（復元済み）`;
+      }
+    } catch(e) {}
+  }
+}
+init();
+</script>
+<div class="draw-modal" id="drawModal">
+  <div class="draw-toolbar">
+    <label style="color:#fff;font-size:13px">🎨
+      <input type="color" id="drawColor" value="#e74c3c">
+    </label>
+    <label style="color:#fff;font-size:13px">太さ
+      <input type="range" id="drawSize" min="2" max="40" value="6" style="width:70px">
+    </label>
+    <button class="btn btn-white" onclick="setDrawMode('pen')" id="btnPen" style="padding:5px 10px;font-size:13px">✏️ ペン</button>
+    <button class="btn btn-gray" onclick="setDrawMode('eraser')" id="btnEraser" style="padding:5px 10px;font-size:13px">🧹 消しゴム</button>
+    <button class="btn btn-gray" onclick="undoDraw()" style="padding:5px 10px;font-size:13px">↩ 戻す</button>
+    <button class="btn btn-red" onclick="clearDraw()" style="padding:5px 10px;font-size:13px">🗑 全消去</button>
+  </div>
+  <div class="draw-canvas-wrap">
+    <canvas id="drawCanvas"></canvas>
+  </div>
+  <div class="draw-actions">
+    <button class="btn btn-gray" onclick="closeDrawModal()" style="padding:10px 20px">キャンセル</button>
+    <button class="btn btn-green" onclick="saveDrawing()" style="padding:10px 20px">💾 保存</button>
+  </div>
+</div>
+
+<script>
+// ===== 手書き機能 =====
+let drawCtx = null;
+let drawCanvas = null;
+let isDrawing = false;
+let drawMode = 'pen';
+let drawHistory = [];
+let currentDrawCode = null;
+let currentDrawPhotoId = null;
+
+function initCanvas(imgSrc) {
+  drawCanvas = document.getElementById('drawCanvas');
+  drawCtx = drawCanvas.getContext('2d');
+  const img = new Image();
+  img.onload = () => {
+    // iPadの画面サイズに合わせる
+    const maxW = window.innerWidth;
+    const maxH = window.innerHeight - 120;
+    const scale = Math.min(maxW / img.width, maxH / img.height, 1);
+    drawCanvas.width  = img.width  * scale;
+    drawCanvas.height = img.height * scale;
+    drawCtx.drawImage(img, 0, 0, drawCanvas.width, drawCanvas.height);
+    drawHistory = [drawCtx.getImageData(0, 0, drawCanvas.width, drawCanvas.height)];
+  };
+  img.src = imgSrc;
+}
+
+function openDrawModal(code, photoId) {
+  const photos = groupPhotos[code] || [];
+  const p = photos.find(p => p.id === photoId);
+  if (!p) return;
+  currentDrawCode = code;
+  currentDrawPhotoId = photoId;
+  document.getElementById('drawModal').classList.add('open');
+  setDrawMode('pen');
+  initCanvas(p.dataUrl);
+  setupDrawEvents();
+}
+
+function closeDrawModal() {
+  document.getElementById('drawModal').classList.remove('open');
+  removeDrawEvents();
+}
+
+function setDrawMode(mode) {
+  drawMode = mode;
+  document.getElementById('btnPen').className    = mode === 'pen'    ? 'btn btn-blue' : 'btn btn-gray';
+  document.getElementById('btnEraser').className = mode === 'eraser' ? 'btn btn-blue' : 'btn btn-gray';
+  document.getElementById('btnPen').style.padding = '5px 10px';
+  document.getElementById('btnEraser').style.padding = '5px 10px';
+  document.getElementById('btnPen').style.fontSize = '13px';
+  document.getElementById('btnEraser').style.fontSize = '13px';
+}
+
+function undoDraw() {
+  if (drawHistory.length <= 1) return;
+  drawHistory.pop();
+  drawCtx.putImageData(drawHistory[drawHistory.length - 1], 0, 0);
+}
+
+function clearDraw() {
+  if (drawHistory.length > 0) {
+    drawCtx.putImageData(drawHistory[0], 0, 0);
+    drawHistory = [drawHistory[0]];
+  }
+}
+
+function getPos(e, canvas) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width  / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const src = e.touches ? e.touches[0] : e;
+  return {
+    x: (src.clientX - rect.left) * scaleX,
+    y: (src.clientY - rect.top)  * scaleY
+  };
+}
+
+function onDrawStart(e) {
+  e.preventDefault();
+  isDrawing = true;
+  const pos = getPos(e, drawCanvas);
+  drawCtx.beginPath();
+  drawCtx.moveTo(pos.x, pos.y);
+}
+
+function onDrawMove(e) {
+  e.preventDefault();
+  if (!isDrawing) return;
+  const pos = getPos(e, drawCanvas);
+  const size = parseInt(document.getElementById('drawSize').value);
+  const color = document.getElementById('drawColor').value;
+  if (drawMode === 'eraser') {
+    drawCtx.globalCompositeOperation = 'destination-out';
+    drawCtx.lineWidth = size * 3;
+    drawCtx.strokeStyle = 'rgba(0,0,0,1)';
+  } else {
+    drawCtx.globalCompositeOperation = 'source-over';
+    drawCtx.lineWidth = size;
+    drawCtx.strokeStyle = color;
+  }
+  drawCtx.lineCap = 'round';
+  drawCtx.lineJoin = 'round';
+  drawCtx.lineTo(pos.x, pos.y);
+  drawCtx.stroke();
+}
+
+function onDrawEnd(e) {
+  if (!isDrawing) return;
+  isDrawing = false;
+  drawCtx.globalCompositeOperation = 'source-over';
+  drawHistory.push(drawCtx.getImageData(0, 0, drawCanvas.width, drawCanvas.height));
+}
+
+function setupDrawEvents() {
+  const c = document.getElementById('drawCanvas');
+  c.addEventListener('mousedown',  onDrawStart);
+  c.addEventListener('mousemove',  onDrawMove);
+  c.addEventListener('mouseup',    onDrawEnd);
+  c.addEventListener('touchstart', onDrawStart, {passive:false});
+  c.addEventListener('touchmove',  onDrawMove,  {passive:false});
+  c.addEventListener('touchend',   onDrawEnd);
+}
+
+function removeDrawEvents() {
+  const c = document.getElementById('drawCanvas');
+  c.removeEventListener('mousedown',  onDrawStart);
+  c.removeEventListener('mousemove',  onDrawMove);
+  c.removeEventListener('mouseup',    onDrawEnd);
+  c.removeEventListener('touchstart', onDrawStart);
+  c.removeEventListener('touchmove',  onDrawMove);
+  c.removeEventListener('touchend',   onDrawEnd);
+}
+
+function saveDrawing() {
+  const photos = groupPhotos[currentDrawCode];
+  if (!photos) return;
+  const p = photos.find(p => p.id === currentDrawPhotoId);
+  if (!p) return;
+  p.dataUrl = document.getElementById('drawCanvas').toDataURL('image/jpeg', 0.85);
+  closeDrawModal();
+  renderList();
+}
+</script>
+</body>
+</html>
